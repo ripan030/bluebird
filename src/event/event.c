@@ -134,6 +134,7 @@ int event_start(struct event_ctx *ctx)
 #include <sys/timerfd.h>
 #include <inttypes.h>
 #include <stdint.h>
+#include "list.h"
 
 struct timer_event {
     uint32_t id;
@@ -146,11 +147,8 @@ struct timer_event {
 #define MAX_TIMER 8
 struct timer_ctx {
     int fd;
-    /*
-     * TODO: maintain timers  in list
-     */
     unsigned active_timers;
-    struct timer_event events[MAX_TIMER];
+    struct node *event_list;
 };
 
 struct timer_ctx *event_timer_init()
@@ -180,8 +178,32 @@ struct timer_ctx *event_timer_init()
     }
 
     ctx.fd = fd;
+    list_init(&ctx.event_list);
 
     return &ctx;
+}
+
+void timer_event_free(struct timer_event *e)
+{
+    free(e);
+}
+
+void timer_event_node_free(void *p)
+{
+    struct timer_event *e = (struct timer_event *)p;
+    timer_event_free(e);
+}
+
+int timer_event_node_is_match_all(struct node *n, void *p)
+{
+    return 1;
+}
+
+void timer_event_delete_all(struct timer_ctx *ctx)
+{
+    list_node_delete(&ctx->event_list,
+            timer_event_node_is_match_all, NULL,
+            timer_event_node_free);
 }
 
 void event_timer_destroy(struct timer_ctx *ctx)
@@ -191,9 +213,20 @@ void event_timer_destroy(struct timer_ctx *ctx)
     ctx->active_timers = 0;
 }
 
-void timer_event_iter(struct timer_event *e, void *p);
-void timer_event_for_each(struct timer_ctx *ctx, void (*cb)(struct timer_event *e, void *cbd),
-        void *cbd);
+void timer_event_node_iter_cb(struct node *n, void *cbd)
+{
+    struct timer_event *e = (struct timer_event *)n->data;
+
+    if (e->remaing_intvl > 0) {
+        e->remaing_intvl--;
+    }
+
+    if (e->remaing_intvl == 0) {
+        e->remaing_intvl = e->intvl;
+        e->cb(e->cbd);
+    }
+}
+
 void event_timer_1s_handler(void *data)
 {
     struct timer_ctx *ctx = (struct timer_ctx *)data;
@@ -201,61 +234,77 @@ void event_timer_1s_handler(void *data)
 
     read(ctx->fd, &res, sizeof(res));
 
-    timer_event_for_each(ctx, timer_event_iter, NULL);
+    list_iter(&ctx->event_list, timer_event_node_iter_cb, NULL);
 }
 
-int timer_event_add(struct timer_ctx *ctx, uint32_t intvl, void (*cb)(void *cbd), void *cbd)
+struct timer_event *
+timer_event_new(struct timer_ctx *ctx, uint32_t intvl, void (*cb)(void *cbd), void *cbd)
 {
     struct timer_event *e;
+
+    e = malloc(sizeof(struct timer_event));
+
+    if (e) {
+        e->intvl = intvl;
+        e->cb = cb;
+        e->cbd = cbd;
+        e->remaing_intvl = intvl;
+        e->id = ctx->active_timers;
+    }
+
+    return e;
+}
+
+int timer_event_add(uint32_t *id, struct timer_ctx *ctx, uint32_t intvl, void (*cb)(void *cbd), void *cbd)
+{
+    struct timer_event *e;
+    struct node *n;
 
     if (ctx->fd < 0) {
         return -1;
     }
 
-    if (ctx->active_timers >= MAX_TIMER) {
+    e = timer_event_new(ctx, intvl, cb, cbd);
+    if (!e) {
         return -1;
     }
-    e = &ctx->events[ctx->active_timers++];
 
-    e->intvl = intvl;
-    e->cb = cb;
-    e->cbd = cbd;
-    e->remaing_intvl = intvl;
-    e->id = ctx->active_timers;
+    n = list_node_new(e);
+    if (!n) {
+        timer_event_free(e);
+        return -1;
+    }
+
+    list_node_add(&ctx->event_list, n);
+
+    ctx->active_timers += 1;
+
+    if (id) {
+        *id = e->id;
+    }
+
+    return 0;
+}
+
+int timer_event_node_is_match(struct node *n, void *p)
+{
+    struct timer_event *e = (struct timer_event *)n->data;
+    uint32_t *id = (uint32_t *)p;
+
+    if (e->id == *id) {
+        return 1;
+    }
 
     return 0;
 }
 
 int timer_event_delete(struct timer_ctx *ctx, uint32_t timer_id)
 {
-    /*
-     * TODO: implemet this when timer is maintained in list
-     */
-
-    return -1;
+    list_node_delete(&ctx->event_list,
+            timer_event_node_is_match, &timer_id,
+            timer_event_node_free);
+    return 0;
 }
-
-void timer_event_iter(struct timer_event *e, void *p)
-{
-    if (e->remaing_intvl > 0) {
-        e->remaing_intvl--;
-    }
-    if (e->remaing_intvl == 0) {
-        e->remaing_intvl = e->intvl;
-        e->cb(e->cbd);
-    }
-}
-
-void timer_event_for_each(struct timer_ctx *ctx, void (*cb)(struct timer_event *e, void *cbd),
-        void *cbd)
-{
-    int ii;
-
-    for (ii = 0; ii < ctx->active_timers; ii++) {
-        cb(&ctx->events[ii], cbd);
-    }
-}
-
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 
 /*
@@ -332,6 +381,9 @@ struct test {
     uint32_t x;
 };
 
+static struct timer_ctx *_tmr_ctx;
+static uint32_t _tmr_id;
+
 static void test_timer(void *data)
 {
     struct event_hdr *hdr;
@@ -349,19 +401,24 @@ static void test_timer(void *data)
     case EVENT_ID_TEST1:
         {
             struct test *t = (struct test *)data;
-            printf("x = 0x%x\n", t->x);
+            printf("3s: id = 0x%x\n", t->x);
         }
         break;
     case EVENT_ID_TEST2:
         {
             struct test *t = (struct test *)data;
-            printf("x = 0x%x\n", t->x);
+            printf("5s: id = 0x%x\n", t->x);
+
         }
         break;
     case EVENT_ID_TEST3:
         {
             struct test *t = (struct test *)data;
-            printf("x = 0x%x\n", t->x);
+            printf("10s: id = 0x%x\n", t->x);
+            printf("Deleting 10s timer...\n");
+            if (_tmr_id > 0) {
+                timer_event_delete(_tmr_ctx, _tmr_id);
+            }
         }
         break;
     default:
@@ -396,17 +453,17 @@ int main()
     /*
      * Add timers
      */
-    struct test t5, t10, t3;
-    MSG_HDR_DEF(&t5, EVENT_ID_TEST1, sizeof(t5));
-    t5.x = 0xdead;
-    MSG_HDR_DEF(&t10, EVENT_ID_TEST2, sizeof(t10));
-    t10.x = 0xabcd;
-    MSG_HDR_DEF(&t3, EVENT_ID_TEST3, sizeof(t3));
-    t3.x = 0xffff;
+    struct test t3, t5, t10;
+    MSG_HDR_DEF(&t3, EVENT_ID_TEST1, sizeof(t3));
+    MSG_HDR_DEF(&t5, EVENT_ID_TEST2, sizeof(t5));
+    MSG_HDR_DEF(&t10, EVENT_ID_TEST3, sizeof(t10));
 
-    timer_event_add(tmr_ctx, 5, test_timer, &t5);
-    timer_event_add(tmr_ctx, 10, test_timer, &t10);
-    timer_event_add(tmr_ctx, 3, test_timer, &t3);
+    timer_event_add(&t3.x, tmr_ctx, 3, test_timer, &t3);
+    timer_event_add(&t5.x, tmr_ctx, 5, test_timer, &t5);
+    timer_event_add(&t10.x, tmr_ctx, 10, test_timer, &t10);
+
+    _tmr_ctx = tmr_ctx;
+    _tmr_id = t10.x;
 
     /*
      * Add timers to event context
