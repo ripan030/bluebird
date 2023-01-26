@@ -136,12 +136,15 @@ int event_start(struct event_ctx *ctx)
 #include <stdint.h>
 #include "list.h"
 
+struct timer_ctx;
+
 struct timer_event {
     uint32_t id;
     uint32_t intvl;
     uint32_t remaing_intvl;
     void (*cb)(void *cbd);
     void *cbd;
+    struct timer_ctx *tmr_ctx;
 };
 
 #define MAX_TIMER 8
@@ -191,7 +194,11 @@ void timer_event_free(struct timer_event *e)
 void timer_event_node_free(void *p)
 {
     struct timer_event *e = (struct timer_event *)p;
+    struct timer_ctx *ctx = e->tmr_ctx;
+
     timer_event_free(e);
+    if (ctx->active_timers > 0)
+        ctx->active_timers--;
 }
 
 int timer_event_node_is_match_all(struct node *n, void *p)
@@ -208,6 +215,7 @@ void timer_event_delete_all(struct timer_ctx *ctx)
 
 void event_timer_destroy(struct timer_ctx *ctx)
 {
+    timer_event_delete_all(ctx);
     close(ctx->fd);
     ctx->fd = -1;
     ctx->active_timers = 0;
@@ -250,6 +258,7 @@ timer_event_new(struct timer_ctx *ctx, uint32_t intvl, void (*cb)(void *cbd), vo
         e->cbd = cbd;
         e->remaing_intvl = intvl;
         e->id = ctx->active_timers;
+        e->tmr_ctx = ctx;
     }
 
     return e;
