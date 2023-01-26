@@ -8,7 +8,7 @@ struct event_ctx {
 
 struct event {
     int fd;
-    void *(*cb)(void *cbd);
+    void (*cb)(void *cbd);
     void *cbd;
 };
 
@@ -35,7 +35,7 @@ void event_destroy(struct event_ctx *ctx)
     ctx->fd = -1;
 }
 
-struct event *event_create(int fd, void *(*cb)(void *cbd), void *cbd, struct event *e)
+struct event *event_create(int fd, void (*cb)(void *cbd), void *cbd, struct event *e)
 {
     if (e) {
         e->fd = fd;
@@ -194,7 +194,7 @@ void event_timer_destroy(struct timer_ctx *ctx)
 void timer_event_iter(struct timer_event *e, void *p);
 void timer_event_for_each(struct timer_ctx *ctx, void (*cb)(struct timer_event *e, void *cbd),
         void *cbd);
-void *event_timer_1s_handler(void *data)
+void event_timer_1s_handler(void *data)
 {
     struct timer_ctx *ctx = (struct timer_ctx *)data;
     uint64_t res;
@@ -207,8 +207,6 @@ void *event_timer_1s_handler(void *data)
 int timer_event_add(struct timer_ctx *ctx, uint32_t intvl, void (*cb)(void *cbd), void *cbd)
 {
     struct timer_event *e;
-    struct timespec tp;
-    time_t curr_ts, next_ts;
 
     if (ctx->fd < 0) {
         return -1;
@@ -224,6 +222,8 @@ int timer_event_add(struct timer_ctx *ctx, uint32_t intvl, void (*cb)(void *cbd)
     e->cbd = cbd;
     e->remaing_intvl = intvl;
     e->id = ctx->active_timers;
+
+    return 0;
 }
 
 int timer_event_delete(struct timer_ctx *ctx, uint32_t timer_id)
@@ -231,6 +231,8 @@ int timer_event_delete(struct timer_ctx *ctx, uint32_t timer_id)
     /*
      * TODO: implemet this when timer is maintained in list
      */
+
+    return -1;
 }
 
 void timer_event_iter(struct timer_event *e, void *p)
