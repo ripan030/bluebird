@@ -1,3 +1,6 @@
+#ifndef _LIST_H
+#define _LIST_H
+
 #include <stdio.h>
 #include <stdlib.h>
 
@@ -7,11 +10,13 @@ struct node {
     struct node *prev;
 };
 
+static inline
 void list_init(struct node **head)
 {
     *head = NULL;
 }
 
+static inline
 void list_node_add(struct node **head, struct node *node)
 {
     node->prev = NULL;
@@ -20,6 +25,7 @@ void list_node_add(struct node **head, struct node *node)
     *head = node;
 }
 
+static inline
 void list_node_delete(struct node **head, int (*is_true)(struct node *, void *), void *m, void (*cb)(void *))
 {
     struct node *n = *head;
@@ -43,6 +49,7 @@ void list_node_delete(struct node **head, int (*is_true)(struct node *, void *),
 
 }
 
+static inline
 void list_iter(struct node **head, void (*cb)(struct node *n, void *cbd), void *cbd)
 {
     struct node *n = *head;
@@ -53,6 +60,7 @@ void list_iter(struct node **head, void (*cb)(struct node *n, void *cbd), void *
     }
 }
 
+static inline
 struct node *list_node_new(void *data)
 {
     struct node *n;
@@ -67,3 +75,4 @@ struct node *list_node_new(void *data)
 
     return n;
 }
+#endif
