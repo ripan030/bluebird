@@ -5,7 +5,7 @@ project(bluebird VERSION 0.0 LANGUAGES C CXX)
 set(CMAKE_C_STANDARD 99)
 set(CMAKE_CXX_STANDARD 17)
 
-add_compile_options(-Wall -Werror)
+add_compile_options(-Wall -Werror -g)
 
 list(APPEND CMAKE_MODULE_PATH "${PROJECT_SOURCE_DIR}/cmake")
 
