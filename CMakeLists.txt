@@ -9,6 +9,16 @@ add_compile_options(-Wall -Werror -g)
 
 list(APPEND CMAKE_MODULE_PATH "${PROJECT_SOURCE_DIR}/cmake")
 
+find_package(PkgConfig REQUIRED)
+pkg_check_modules(Systemd IMPORTED_TARGET GLOBAL libsystemd>=236)
+if(NOT TARGET PkgConfig::Systemd)
+    message(FATAL_ERROR "system libsystemd not found")
+endif()
+message(STATUS "Bulding sdbus cpp with system libsystemd")
+add_library(Systemd::Libsystemd ALIAS PkgConfig::Systemd)
+
+include(${PROJECT_SOURCE_DIR}/cmake/SdbusCppExternalProject.cmake)
+
 add_subdirectory(src)
 
 #### Install ####
