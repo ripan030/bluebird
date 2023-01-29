@@ -19,6 +19,8 @@ add_library(Systemd::Libsystemd ALIAS PkgConfig::Systemd)
 
 include(${PROJECT_SOURCE_DIR}/cmake/SdbusCppExternalProject.cmake)
 
+include(${PROJECT_SOURCE_DIR}/cmake/ProtoBufExternalProject.cmake)
+
 add_subdirectory(src)
 
 #### Install ####

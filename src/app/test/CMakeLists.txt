@@ -1,4 +1,5 @@
 add_subdirectory(sdbus)
+add_subdirectory(pbuf)
 
 add_executable(test_app main.c)
 target_link_libraries(test_app PRIVATE event)
