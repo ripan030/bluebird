@@ -51,6 +51,7 @@ ExternalProject_Add(ep-grpc
 ExternalProject_Add(ep-bluebird
     PREFIX              bluebird
     SOURCE_DIR          "${PROJECT_SOURCE_DIR}/src"
+    BUILD_ALWAYS        TRUE
     CMAKE_CACHE_ARGS    -DCMAKE_BUILD_TYPE:STRING=${CMAKE_BUILD_TYPE}
                         -DCMAKE_CXX_COMPILER:STRING=${CMAKE_CXX_COMPILER}
                         -DCMAKE_CXX_STANDARD:STRING=${CMAKE_CXX_STANDARD}
