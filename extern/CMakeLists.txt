@@ -25,6 +25,29 @@ set(Protobuf_INCLUDE_DIR ${PBUF_DIR}/include)
 set(Protobuf_LIBRARY ${PBUF_DIR}/lib/libprotobuf.a)
 set(Protobuf_PROTOC_EXECUTABLE ${PBUF_DIR}/bin/protoc)
 
+# Following submodule update --init required in the grpc dir.
+set(GRPC_GIT_SUBMODULES
+    third_party/zlib
+    third_party/re2
+    third_party/abseil-cpp
+    third_party/boringssl
+    third_party/cares/cares
+)
+
+ExternalProject_Add(ep-grpc
+    PREFIX              grpc
+    SOURCE_DIR          "${CMAKE_CURRENT_SOURCE_DIR}/grpc"
+    CMAKE_CACHE_ARGS    -DgRPC_INSTALL:BOOL=ON
+                        -DgRPC_BUILD_TESTS:BOOL=OFF
+                        -DgRPC_PROTOBUF_PROVIDER:STRING=package
+                        -DgRPC_PROTOBUF_PACKAGE_TYPE:STRING=CONFIG
+                        -DgRPC_CARES_PROVIDER:STRING=module
+                        -DProtobuf_DIR:PATH=${PROJECT_BINARY_DIR}/protobuf/lib/cmake/protobuf
+                        -DCMAKE_INSTALL_PREFIX:PATH=${PROJECT_BINARY_DIR}/grpc
+
+    DEPENDS             ep-protobuf
+)
+
 ExternalProject_Add(ep-bluebird
     PREFIX              bluebird
     SOURCE_DIR          "${PROJECT_SOURCE_DIR}/src"
@@ -35,5 +58,8 @@ ExternalProject_Add(ep-bluebird
                         -DProtobuf_INCLUDE_DIR:PATH=${Protobuf_INCLUDE_DIR}
                         -DProtobuf_LIBRARY:PATH=${Protobuf_LIBRARY}
                         -DProtobuf_PROTOC_EXECUTABLE:PATH=${Protobuf_PROTOC_EXECUTABLE}
-    DEPENDS             ep-protobuf SDBusCpp::sdbus-c++
+                        -DProtobuf_DIR:PATH=${PROJECT_BINARY_DIR}/protobuf/lib/cmake/protobuf
+                        -DgRPC_DIR:PATH=${PROJECT_BINARY_DIR}/grpc/lib/cmake/grpc
+                        -Dabsl_DIR:PATH=${PROJECT_BINARY_DIR}/grpc/lib/cmake/absl
+    DEPENDS             ep-protobuf ep-grpc SDBusCpp::sdbus-c++
 )
