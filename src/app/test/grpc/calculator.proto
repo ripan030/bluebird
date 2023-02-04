@@ -1,0 +1,30 @@
+syntax = "proto3";
+
+option java_package = "ex.grpc";
+
+package calculator;
+
+service Calc {
+    rpc sendRequest(CalcRequest) returns (CalcReply) {}
+}
+
+message CalcRequest {
+    oneof ReqOp {
+        AddReq add_req = 1;
+        DeleteReq del_req = 2;
+    }
+}
+
+message CalcReply {
+    int32 result = 1;
+}
+
+message AddReq {
+    int32 a = 1;
+    int32 b = 2;
+}
+
+message DeleteReq {
+    int32 a = 1;
+    int32 b = 2;
+}
