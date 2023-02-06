@@ -82,6 +82,7 @@ public:
 
     void View() {
         cout << "\n++++++++++++++++++++++++++++++++++++++++\n";
+        cout << "Chat Window [" << whom << "]\n";
         for (const auto &cm : messages) {
             cout << FormatMessage(cm) << endl;
         }
