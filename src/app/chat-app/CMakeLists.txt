@@ -14,10 +14,17 @@ protobuf_generate(TARGET chat_proto LANGUAGE grpc GENERATE_EXTENSIONS .grpc.pb.h
 add_executable(chat_client chat_client.cpp)
 target_link_libraries(chat_client PRIVATE chat_proto SDBusCpp::sdbus-c++)
 
-install(TARGETS chat_client RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR})
+add_executable(chat_service chat_service.cpp)
+target_link_libraries(chat_service PRIVATE chat_proto)
+
+install(TARGETS chat_client chat_service RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR})
 
 add_executable(test_chat_client chat_client.cpp)
 target_link_libraries(test_chat_client PRIVATE chat_proto SDBusCpp::sdbus-c++)
 target_compile_definitions(test_chat_client PUBLIC -DUNIT_TEST)
 
-install(TARGETS test_chat_client RUNTIME DESTINATION "${CMAKE_INSTALL_BINDIR}/test")
+add_executable(test_chat_service chat_service.cpp)
+target_link_libraries(test_chat_service PRIVATE chat_proto)
+target_compile_definitions(test_chat_service PUBLIC -DUNIT_TEST)
+
+install(TARGETS test_chat_client test_chat_service RUNTIME DESTINATION "${CMAKE_INSTALL_BINDIR}/test")
