@@ -3,6 +3,7 @@
 #include <unordered_map>
 #include <memory>
 #include <thread>
+#include <chrono>
 
 #include <grpcpp/grpcpp.h>
 #include <grpcpp/channel.h>
@@ -127,17 +128,20 @@ uint32_t Chatting::totalChats = 0;
 
 class ChatClient {
         std::unique_ptr<Chat::Stub> stub_;
-        ClientContext context;
+        std::unique_ptr<ClientContext> context;
+        std::shared_ptr<Channel> channel_;
         std::unique_ptr<ClientReaderWriter<StreamRequest, StreamResponse>> stream_;
         std::unique_ptr<Profile> profile;
         std::vector<std::string> activeFriends;
         std::unordered_map<std::string, std::unique_ptr<Chatting>> activeChats;
 public:
     ChatClient(std::shared_ptr<Channel> channel) :
-        stub_{Chat::NewStub(channel)}, profile{} {
-        std::unique_ptr<ClientReaderWriter<StreamRequest, StreamResponse>> stream(stub_->ChatStream(&context));
+        stub_{Chat::NewStub(channel)},
+        channel_{channel},
+        profile{} {
 
-        stream_ = std::move(stream);
+        context = std::make_unique<grpc::ClientContext>();
+        stream_ = stub_->ChatStream(context.get());
 
 #ifdef UNIT_TEST
         std::unique_ptr<Profile> p = std::make_unique<Profile>("bluebard", "bluebird");
@@ -147,6 +151,14 @@ public:
         activeFriends.push_back("green30");
         activeFriends.push_back("orange");
 #endif
+    }
+
+    void ResetStream() {
+        context->TryCancel();
+        stream_->Finish();
+
+        context = std::make_unique<grpc::ClientContext>();
+        stream_ = stub_->ChatStream(context.get());
     }
 
     bool SignUp(std::string username, std::string displayName, std::string password) {
@@ -248,6 +260,10 @@ public:
         c->View();
     }
 
+    int GetChannelState() const {
+        return channel_->GetState(true);
+    }
+
     void StartChat() {
         /*
          * Create a thread to send messages
@@ -287,18 +303,74 @@ public:
             connection->enterEventLoop();
         });
 
+        std::thread channel_state([this]() {
+            int prev_state = -1;
+            int curr_state = -1;
+            while (1) {
+                curr_state = GetChannelState();
+
+                auto state_str = [](int state)-> std::string {
+                    switch (state) {
+                    case GRPC_CHANNEL_IDLE:
+                        return {"IDLE"};
+                    case GRPC_CHANNEL_CONNECTING:
+                        return {"CONNECTING"};
+                    case GRPC_CHANNEL_READY:
+                        return {"READY"};
+                    case GRPC_CHANNEL_TRANSIENT_FAILURE:
+                        return {"TRANSIENT FAILURE"};
+                    case GRPC_CHANNEL_SHUTDOWN:
+                        return {"SHUTDOWN"};
+                    default:
+                        return {"UNKNOWN"};
+                    }
+                };
+
+                if (curr_state != prev_state) {
+                    prev_state = curr_state;
+
+                    cout << "Channel state " << state_str(curr_state) << endl;
+
+                    if (curr_state == GRPC_CHANNEL_READY) {
+                        ResetStream();
+                    }
+                }
+
+                std::this_thread::sleep_for (std::chrono::seconds(8));
+            }
+        });
+
         /*
          * Start listening to the stream
          */
         StreamResponse resp;
-        while (stream_->Read(&resp)) {
-            if (resp.has_msg_resp()) {
-                ReceiveUserChatMessage(resp.msg_resp());
+        while (1) {
+            while (stream_->Read(&resp)) {
+                if (resp.has_msg_resp()) {
+                    ReceiveUserChatMessage(resp.msg_resp());
+                }
             }
+
+            /*
+             * Server close its write stream
+             */
+            std::this_thread::sleep_for (std::chrono::seconds(8));
         }
 
         writer.join();
+        channel_state.join();
+
         stream_->Finish();
+    }
+
+    void Run() {
+        std::string address("0.0.0.0:5000");
+        ChatClient client(
+            grpc::CreateChannel(
+                address,
+                grpc::InsecureChannelCredentials()
+            )
+        );
     }
 };
 

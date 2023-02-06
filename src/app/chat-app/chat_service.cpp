@@ -8,6 +8,8 @@
 #include <chat.grpc.pb.h>
 #include <chat.pb.h>
 
+using namespace std;
+
 using grpc::Server;
 using grpc::ServerBuilder;
 using grpc::ServerContext;
@@ -183,6 +185,8 @@ public:
                 std::cout << "Unknown request\n";
             }
         }
+
+        cout << "Client close its write stream\n";
 
         return Status::OK;
     }
