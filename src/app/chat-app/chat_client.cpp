@@ -173,6 +173,47 @@ public:
         return true;
     }
 
+    bool SendSessionStartRequest(std::string username) {
+        StreamRequest req;
+        SessionStartRequest *m = new SessionStartRequest{};
+
+        m->set_username(username);
+
+        req.set_allocated_start_req(m);
+
+        stream_->Write(req);
+
+        return true;
+    }
+
+    bool ReceiveSessionStartResponse(SessionStartResponse m) {
+
+        cout << "Session start response : sid = " << m.session_id() << " status = " << m.status() << endl;
+
+        return true;
+    }
+
+    bool SendSessionStopRequest(uint32_t sid, std::string username) {
+        StreamRequest req;
+        SessionStopRequest *m = new SessionStopRequest{};
+
+        m->set_session_id(sid);
+        m->set_username(username);
+
+        req.set_allocated_stop_req(m);
+
+        stream_->Write(req);
+
+        return true;
+    }
+
+    bool ReceiveSessionStopResponse(SessionStopResponse m) {
+
+        cout << "Session stop response : status = " << m.status() << endl;
+
+        return true;
+    }
+
     bool Login(std::string username, std::string password) {
         /*
          * Load profile
@@ -184,6 +225,8 @@ public:
         /*
          * Send start session request to the server
          */
+        cout << "Login: Sending session start request for user " << username << endl;
+        SendSessionStartRequest(profile->GetUserName());
 
         return true;
     }
@@ -348,6 +391,12 @@ public:
             while (stream_->Read(&resp)) {
                 if (resp.has_msg_resp()) {
                     ReceiveUserChatMessage(resp.msg_resp());
+                } else if (resp.has_start_resp()) {
+                    ReceiveSessionStartResponse(resp.start_resp());
+                } else if (resp.has_stop_resp()) {
+                    ReceiveSessionStopResponse(resp.stop_resp());
+                } else {
+                    cout << "Unknown stream response\n";
                 }
             }
 
