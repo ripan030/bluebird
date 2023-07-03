@@ -191,11 +191,7 @@ public:
 
 // GamePlay
 class GamePlay : public State {
-    bool escButtonPressed;
     bool pauseButtonPressed;
-    bool leftButtonPressed;
-    bool rightButtonPressed;
-    bool shootButtonPressed;
     std::shared_ptr<Context> context;
 
     sf::Texture playerTexture, enemyTexture, bulletTexture;
@@ -299,11 +295,7 @@ void GamePlay::init() {
 }
 
 void GamePlay::processUserInput() {
-    escButtonPressed = false;
     pauseButtonPressed = false;
-    leftButtonPressed = false;
-    rightButtonPressed = false;
-    shootButtonPressed = false;
     sf::Event event;
 
     while (context->window->pollEvent(event)) {
@@ -312,48 +304,34 @@ void GamePlay::processUserInput() {
         } else if (event.type == sf::Event::KeyPressed) {
             switch (event.key.code) {
             case sf::Keyboard::A:
-                leftButtonPressed = true;
+                player->move_left();
                 break;
             case sf::Keyboard::D:
-                rightButtonPressed = true;
+                player->move_right();
                 break;
             case sf::Keyboard::P:
                 pauseButtonPressed = true;
                 break;
             case sf::Keyboard::Escape:
-                escButtonPressed = true;
+                context->window->close();
                 break;
             default:
                 break;
             }
-        } else if (event.type == sf::Event::MouseButtonPressed) {
-            if (sf::Mouse::isButtonPressed(sf::Mouse::Left))
-                shootButtonPressed = true;
+        }
+
+        if (sf::Mouse::isButtonPressed(sf::Mouse::Left)) {
+            Bullet bullet{context->window.get(), &bulletTexture};
+            player->shoot(bullet);
         }
     }
 }
 
 void GamePlay::update() {
-    static int shootTimer = 0;
     static int enemySpawnTimer = 0;
-
-    if (shootTimer > 0)
-        shootTimer--;
 
     if (enemySpawnTimer > 0)
         enemySpawnTimer--;
-
-    if (escButtonPressed)
-        context->window->close();
-    else if (leftButtonPressed)
-        player->move_left();
-    else if (rightButtonPressed)
-        player->move_right();
-    else if (shootButtonPressed && shootTimer == 0) {
-        shootTimer = 0;
-        Bullet bullet{context->window.get(), &bulletTexture};
-        player->shoot(bullet);
-    }
 
     if (!enemySpawnTimer) {
         enemySpawnTimer = 40;
