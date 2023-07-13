@@ -4,10 +4,39 @@
 #include <iostream>
 using namespace std;
 
+void MainMenu::InitGui() {
+    font.loadFromFile("fonts/arial.ttf");
+
+    // Configure Window background
+    bgWindow.setSize(sf::Vector2f{640, 480});
+    bgWindow.setFillColor(sf::Color{128, 128, 128, 128});
+
+    // Configure Menu background
+    bgMenu.setSize(sf::Vector2f{100 + 2 * 5, 400});
+    bgMenu.setPosition(sf::Vector2f{100 - 5, 40});
+    bgMenu.setFillColor(sf::Color(10, 10, 10, 220));
+    //bgMenu.setOutlineThickness(1.0f);
+    //bgMenu.setOutlineColor(sf::Color::Red);
+
+    // Add buttons
+    buttons["Play"] = new Button{100, 100, 100, 25, "Play", 20, &font};
+    buttonActions["Play"] = [this]() {
+                stateMgr->SwitchTo(StateType::GamePlay);
+    };
+    buttons["Quit"] = new Button{100, 150, 100, 25, "Quit", 20, &font};
+    buttonActions["Quit"] = [this]() {
+                stateMgr->GetContext()->window->Close();
+    };
+}
+
 MainMenu::MainMenu(StateMgr *stateMgr) : State{stateMgr} {
+    InitGui();
 }
 
 MainMenu::~MainMenu() {
+    for (auto it = buttons.begin(); it != buttons.end(); ++it) {
+        delete it->second;
+    }
 }
 
 void MainMenu::OnCreate() {
@@ -28,29 +57,6 @@ void MainMenu::OnCreate() {
 
     text.setPosition(windowSize.x / 2, 100);
 
-    sf::Vector2f buttonPos = sf::Vector2f(windowSize.x / 2, 200);
-
-    for (int i = 0; i != options.size(); ++i) {
-        // update button position
-        buttonPos.y += i * (buttonSize.y + 8);
-
-        rects[i].setSize(buttonSize);
-        rects[i].setFillColor(sf::Color::Red);
-        rects[i].setOrigin(buttonSize.x / 2, buttonSize.y / 2);
-        rects[i].setPosition(buttonPos);
-
-        labels[i].setFont(font);
-        labels[i].setString(options[i]);
-        labels[i].setCharacterSize(12);
-
-        sf::FloatRect rect = labels[i].getLocalBounds();
-
-        labels[i].setOrigin(rect.left + rect.width / 2.0f,
-                rect.top + rect.height / 2.0f);
-
-        labels[i].setPosition(buttonPos);
-    }
-
     EventMgr *eventMgr = stateMgr->GetContext()->eventMgr;
 
     eventMgr->AddCallback(StateType::MainMenu, "MouseLeft", &MainMenu::MouseClick, this);
@@ -60,59 +66,60 @@ void MainMenu::OnDestroy() {
 
 }
 
-void MainMenu::Update(const sf::Time &time) {
+void MainMenu::UpdateButtons() {
+    sf::RenderWindow *window = stateMgr->GetContext()->window->GetRenderWindow();
+    for (auto &it : buttons) {
+        if (it.second->GetState() == ButtonState::BUTTON_ACTIVE) {
+            it.second->Update(sf::Mouse::getPosition(*window));
+            it.second->SetState(ButtonState::BUTTON_IDLE);
+            continue;
+        }
+        auto rect = it.second->GetRect();
+        if (rect.contains(sf::Vector2f{sf::Mouse::getPosition(*window)})) {
+            it.second->SetState(ButtonState::BUTTON_HOVER);
+        } else {
+            it.second->SetState(ButtonState::BUTTON_IDLE);
+        }
+        it.second->Update(sf::Mouse::getPosition(*window));
+    }
+}
 
+void MainMenu::Update(const sf::Time &time) {
+    UpdateButtons();
+}
+
+void MainMenu::RenderButtons(sf::RenderTarget &target) {
+    for (auto &it : buttons) {
+        it.second->Render(target);
+    }
 }
 
 void MainMenu::Draw() {
     sf::RenderWindow *window = stateMgr->GetContext()->window->GetRenderWindow();
-    window->draw(text);
-    for (int i = 0; i != 2; ++i) {
-        window->draw(rects[i]);
-        window->draw(labels[i]);
-    }
+
+    //window->draw(text);
+    window->draw(bgWindow);
+    window->draw(bgMenu);
+    RenderButtons(*window);
 }
 
 void MainMenu::Activate() {
+
     if (stateMgr->HasState(StateType::GamePlay)) {
-       labels[0].setString({"Resume"});
-
-       sf::FloatRect rect = labels[0].getLocalBounds();
-
-       labels[0].setOrigin(rect.left + rect.width / 2.0f, rect.top + rect.height / 2.0f);
-    }
-}
-
-void MainMenu::UserInput(EventDetails *details) {
-    if (details->code == sf::Keyboard::Up) {
-        cout << "Continue: Move to GamePlay\n";
-        stateMgr->SwitchTo(StateType::MainMenu);
-    } else if (details->code == sf::Keyboard::Down) {
-        cout << "Exit: Close window\n";
-        stateMgr->GetContext()->window->Close();
+        Button *btn = buttons["Play"];
+        btn->UpdateButtonString("Resume");
     }
 }
 
 void MainMenu::MouseClick(EventDetails *details) {
     sf::Vector2i mouse{details->mouse};
 
-    float halfx = buttonSize.x / 2.0f;
-    float halfy = buttonSize.y / 2.0f;
-
-    cout << "Mouse click " << mouse.x << " " << mouse.y << endl;
-    for (int i = 0; i != 2; ++i) {
-        if (mouse.x >= rects[i].getPosition().x - halfx &&
-                mouse.x <= rects[i].getPosition().x + halfx &&
-                mouse.y >= rects[i].getPosition().y - halfy &&
-                mouse.y <= rects[i].getPosition().y + halfy) {
-
-            if (i == 0) { // Play
-                cout << "Play \n";
-                stateMgr->SwitchTo(StateType::GamePlay);
-            } else if (i == 1){
-                cout << "Exit \n";
-                stateMgr->GetContext()->window->Close();
-            }
+    for (auto &it : buttons) {
+        auto rect = it.second->GetRect();
+        if (rect.contains(sf::Vector2f{mouse})) {
+            cout << "Pressed " << it.first << endl;
+            it.second->SetState(ButtonState::BUTTON_ACTIVE);
+            buttonActions[it.first]();
         }
     }
 }
