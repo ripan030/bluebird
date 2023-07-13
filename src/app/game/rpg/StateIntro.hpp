@@ -11,6 +11,7 @@ class StateIntro : public State {
     sf::Texture introTexture;
     sf::Sprite introSprite;
     sf::Font font;
+    const float textDisplay = 10.0f;
 public:
     StateIntro(StateMgr *stateMgr);
     ~StateIntro();

@@ -55,21 +55,19 @@ void StateIntro::Update(const sf::Time &time) {
        rotationAngle = 0;
    introSprite.setRotation(rotationAngle);
 
-   if (timePassed < 600.0f) {
-       timePassed += time.asSeconds();
-   }
+   timePassed += time.asSeconds();
 }
 
 void StateIntro::Draw() {
     sf::RenderWindow *window = stateMgr->GetContext()->window->GetRenderWindow();
     window->draw(introSprite);
-    if (timePassed > 600.0f) {
+    if (timePassed >= textDisplay) {
         window->draw(text);
     }
 }
 
 void StateIntro::Continue(EventDetails *details) {
-    if (timePassed >= 600.0f) {
+    if (timePassed >= textDisplay) {
         cout << "Continue: Move to MainMenu\n";
         stateMgr->SwitchTo(StateType::MainMenu);
     }

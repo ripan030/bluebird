@@ -10,18 +10,14 @@ class Game {
     Window window;
     StateMgr stateMgr;
     sf::Clock clock;
-    sf::Time elapsed;
 public:
     Game();
     ~Game();
     void Update(const sf::Time &time);
     void Render();
-    sf::Time GetElapsedTime() {
-        return elapsed;
-    }
 
-    void RestartClock() {
-        elapsed += clock.restart();
+    sf::Time RestartClock() {
+        return clock.restart();
     }
 
     Window &GetWindow() {
@@ -54,9 +50,8 @@ int main() {
     Game game;
 
     while (game.GetWindow().IsOpen()) {
-        game.Update(game.GetElapsedTime());
+        game.Update(game.RestartClock());
         game.Render();
-        game.RestartClock();
     }
 
     return 0;
