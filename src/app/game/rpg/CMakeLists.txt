@@ -8,7 +8,7 @@ set(CMAKE_CXX_STANDARD 17)
 
 find_package(SFML COMPONENTS system window graphics network audio REQUIRED)
 
-add_executable(test test.cpp EventMgr.cpp Window.cpp StateMgr.cpp StateIntro.cpp MainMenu.cpp GamePlay.cpp GamePaused.cpp Button.cpp)
+add_executable(test test.cpp EventMgr.cpp Window.cpp StateMgr.cpp StateIntro.cpp MainMenu.cpp GamePlay.cpp GamePaused.cpp Button.cpp MovementComponent.cpp AnimationComponent.cpp)
 
 target_link_libraries(test PRIVATE sfml-graphics)
 target_include_directories(test PRIVATE ./)

@@ -25,7 +25,7 @@ public:
     }
 };
 
-Game::Game() : window{"Space War", sf::Vector2u{640, 480}},
+Game::Game() : window{"Gun Man", sf::Vector2u{640, 480}},
     context{&window, window.GetEventMgr()},
     stateMgr{&context} {
     stateMgr.SwitchTo(StateType::Intro);
