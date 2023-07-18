@@ -27,6 +27,26 @@ void EventMgr::LoadBindings() {
     bind = new Binding{"MouseLeft"};
     bind->BindEvent(EventType::MouseButtonDown, {sf::Mouse::Left});
     AddBinding(bind);
+
+    bind = new Binding{"PressedA"};
+    bind->BindEvent(EventType::KeyDown, {sf::Keyboard::A});
+    AddBinding(bind);
+
+    bind = new Binding{"PressedD"};
+    bind->BindEvent(EventType::KeyDown, {sf::Keyboard::D});
+    AddBinding(bind);
+
+    bind = new Binding{"ReleasedD"};
+    bind->BindEvent(EventType::KeyUp, {sf::Keyboard::D});
+    AddBinding(bind);
+
+    bind = new Binding{"PressedW"};
+    bind->BindEvent(EventType::KeyDown, {sf::Keyboard::W});
+    AddBinding(bind);
+
+    bind = new Binding{"PressedS"};
+    bind->BindEvent(EventType::KeyDown, {sf::Keyboard::S});
+    AddBinding(bind);
 }
 
 void EventMgr::UnloadBindings() {
@@ -60,6 +80,7 @@ void EventMgr::HandleEvent(sf::Event event) {
                 // Update event details for processing later
                 if (bind->details.code == -1) {
                     bind->details.code = e.second.code;
+                    bind->details.type = type;
                 }
                 break;
             } else if (type == EventType::MouseButtonDown ||
@@ -67,6 +88,8 @@ void EventMgr::HandleEvent(sf::Event event) {
                 if (event.key.code == e.second.code) {
                     bind->details.mouse.x = event.mouseButton.x;
                     bind->details.mouse.y = event.mouseButton.y;
+
+                    bind->details.type = type;
 
                     if (bind->details.code == -1) {
                         bind->details.code = e.second.code;

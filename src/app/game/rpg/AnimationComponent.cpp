@@ -18,7 +18,7 @@ Animation::~Animation() {
 bool Animation::Play(const float &dt) {
     bool done = false;
     timer += dt;
-    if (timer > animationTimer) {
+    if (animationTimer && timer > animationTimer) {
         timer = 0;
         if (currFrame != endFrame) {
             currFrame.left += startFrame.width;

@@ -43,6 +43,7 @@ struct EventDetails {
     std::string name; // action name
     int code; //keyboard/mouse key code
     sf::Vector2i mouse; // mouse position
+    EventType type;
 };
 
 struct Binding {

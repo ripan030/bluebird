@@ -36,6 +36,9 @@ public:
     ~MovementComponent();
     void Move(const float x, const float y, const float dt);
     void Update(const sf::Time &dt);
+    sf::Vector2f GetVelocity() const {
+        return velocity;
+    }
 };
 
 #endif

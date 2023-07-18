@@ -14,7 +14,7 @@ IntroPlayer::IntroPlayer(const float x, const float y) :
     sprite.setTexture(textureSheet);
     sprite.setPosition(x, y);
 
-    movementComponent = new MovementComponent{shape, 0.3, 0.1, 0};
+    movementComponent = new MovementComponent{shape, 20, 8, 4};
     animationComponent = new AnimationComponent;
 
     animationComponent->AddAnimation("HERO_WALK", sprite, textureSheet,

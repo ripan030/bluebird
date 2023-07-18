@@ -1,5 +1,9 @@
 #include "MovementComponent.hpp"
 
+#include <iostream>
+
+using namespace std;
+
 MovementComponent::MovementComponent(MovableShape &shape, const float maxSpeed, const float acceleration, const float deceleration) :
     shape{shape}, maxSpeed{maxSpeed}, acceleration{acceleration}, deceleration{deceleration} {
 
@@ -10,8 +14,8 @@ MovementComponent::~MovementComponent() {
 }
 
 void MovementComponent::Move(const float dir_x, const float dir_y, const float dt) {
-    velocity.x += acceleration * dir_x;
-    velocity.y += acceleration * dir_y;
+    velocity.x += acceleration * dir_x * dt;
+    velocity.y += acceleration * dir_y * dt;
 }
 
 void MovementComponent::Update(const sf::Time &dt) {
@@ -20,7 +24,7 @@ void MovementComponent::Update(const sf::Time &dt) {
             velocity.x = maxSpeed;
         }
 
-        velocity.x -= deceleration;
+        velocity.x -= deceleration * dt.asSeconds();
         if (velocity.x < 0.f) {
             velocity.x = 0.f;
         }
@@ -29,12 +33,12 @@ void MovementComponent::Update(const sf::Time &dt) {
             velocity.x = -maxSpeed;
         }
 
-        velocity.x += deceleration;
+        velocity.x += deceleration * dt.asSeconds();
         if (velocity.x > 0.f) {
             velocity.x = 0.f;
         }
     }
 
-    shape.Move(velocity);
+    shape.Move(velocity * dt.asSeconds());
 }
 
